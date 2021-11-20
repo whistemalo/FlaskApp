@@ -1294,9 +1294,9 @@ def parser (my_sql_stmn):
 def result():
     output = request.form.to_dict()
     print("pruebas",output)
-    name = (parser(output["name"]))
+    # name = (parser(output["name"]))
     
-    # name = output["name"]
+    name = [('adasd', 'adasda'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz')]
 
 
     return render_template('index.html', name = name)
