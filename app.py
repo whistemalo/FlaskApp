@@ -23,10 +23,14 @@ def home():
 #     print(output)
 
 
-def parser(sql_sentence_web):
-    import pandas as pd
-    import numpy as np
+def parser (my_sql_stmn):
     import mysql.connector
+    #################################################
+    #                                               #
+    #               NEW TRIE                        #
+    #                                               #
+    #################################################
+
     def new_trie(keywords):
         trie = {}
 
@@ -55,6 +59,11 @@ def parser(sql_sentence_web):
             return 2
         return 1
 
+    #################################################
+    #                                               #
+    #                    ERRORS                     #
+    #                                               #
+    #################################################
     from enum import Enum
 
     class AutoName(Enum):
@@ -92,16 +101,13 @@ def parser(sql_sentence_web):
 
     class TokenError(ValueError):
         pass
+    
 
-    #**************************-------------------------------adas
-    # add_cascade(label="sa
-    # da
-    # sd
-    # asd
-    # as
-    # d
-    # as
-    # ", menu=)
+    #################################################
+    #                                               #
+    #                    LEXXER                     #
+    #                                               #
+    #################################################
 
     from enum import auto
     class TokenType(AutoName):
@@ -713,10 +719,17 @@ def parser(sql_sentence_web):
                     break
             self._add(self.KEYWORDS.get(self._text.upper(), TokenType.VAR))
 
-    #funciones
+    #################################################
+    #                                               #
+    #                   FUNCIONES                   #
+    #                                               #
+    #################################################
+  
+    #recibe un argmento escrito por el usuario y le muestra un error
     def syntaxError(target):
         print("Error en la syntaxis: ",target)
-
+    
+    #reibe el nombre de la base datos y comprueba que exista
     def get_dblist(dbName):
         conn = mysql.connector.connect (user='root', password='12345',
                                 host='localhost',buffered=True)
@@ -733,6 +746,8 @@ def parser(sql_sentence_web):
                 exist=True
         return exist
 
+
+    #recibe el nombre de la base de datos y nombre de la tabla y comprueba que existan
     def get_table_list(dbname, tableName):
         
         mydb = mysql.connector.connect(
@@ -752,6 +767,7 @@ def parser(sql_sentence_web):
         mydb.close()
         return False
 
+    #crea la base de datos 
     def create_db(query):
         querybuild=" ".join(map(str,query))
         mydb = mysql.connector.connect(
@@ -763,10 +779,36 @@ def parser(sql_sentence_web):
         mycursor.execute(querybuild)
         mycursor.close()
 
-    def execute_query(query,dbname):
+    #
+    def execute_query(query,query_tokens,dbname):
         querybuild=""" """
         for x in range (len(query)):
-            if tokens_arr[x]=='STRING':
+            if query_tokens[x]=='STRING':
+                querybuild=querybuild+'"'+query[x]+'"'
+            else:
+                querybuild=querybuild+' '+query[x]
+        mydb = mysql.connector.connect(
+                host="localhost",
+                user="root",
+                passwd="12345",
+                database=dbname
+                )
+
+        if mydb.is_connected()==False:
+            print("No esta conectado")
+        elif mydb.is_connected()==True:
+            print("Conectado")
+
+        mycursor = mydb.cursor()
+        mycursor.execute(str(querybuild))
+        mydb.close()
+        return 
+    
+    
+    def execute_query_insert(query,query_tokens,dbname):
+        querybuild=""" """
+        for x in range (len(query)):
+            if query_tokens[x]=='STRING':
                 querybuild=querybuild+'"'+query[x]+'"'
             else:
                 querybuild=querybuild+' '+query[x]
@@ -788,6 +830,61 @@ def parser(sql_sentence_web):
         print(mycursor.rowcount, "datos ingresados.")
         mydb.close()
         return 
+    def execute_query_select(query,query_tokens,dbname):
+        querybuild=""" """
+        for x in range (len(query)):
+            if query_tokens[x]=='STRING':
+                querybuild=querybuild+'"'+query[x]+'"'
+            else:
+                querybuild=querybuild+' '+query[x]
+        mydb = mysql.connector.connect(
+                host="localhost",
+                user="root",
+                passwd="12345",
+                database=dbname
+                )
+
+        if mydb.is_connected()==False:
+            print("No esta conectado")
+        elif mydb.is_connected()==True:
+            print("Conectado")
+
+        mycursor = mydb.cursor()
+        mycursor.execute(str(querybuild))
+        myresult= mycursor.fetchall()
+        response_from_select=[]
+        for x in myresult:
+            response_from_select.append(x)
+        mydb.close()
+        print(response_from_select)
+        return response_from_select
+    def execute_query(query,query_tokens,dbname):
+        querybuild=""" """
+        for x in range (len(query)):
+            if query_tokens[x]=='STRING':
+                querybuild=querybuild+'"'+query[x]+'"'
+            else:
+                querybuild=querybuild+' '+query[x]
+        mydb = mysql.connector.connect(
+                host="localhost",
+                user="root",
+                passwd="12345",
+                database=dbname
+                )
+
+        if mydb.is_connected()==False:
+            print("No esta conectado")
+        elif mydb.is_connected()==True:
+            print("Conectado")
+
+        mycursor = mydb.cursor()
+        mycursor.execute(str(querybuild))
+        mydb.commit()
+        print(mycursor.rowcount, "datos ingresados.")
+        mydb.close()
+        return 
+
+
 
     def create_table_analisis_apend(tokens_query, text_query,i):
         if tokens_query[i]=='L_PAREN':
@@ -850,8 +947,6 @@ def parser(sql_sentence_web):
             
         return True
 
-    # INSERT INTO ruby (col1,col2) VALUES(col2*2,15);
-
     def insert_analisis(tokens_query, text_query,x):
         if tokens_query[x+1]=='L_PAREN':
             x+=2
@@ -905,12 +1000,105 @@ def parser(sql_sentence_web):
             return False
     
         return True
-    
+
+    def select_analisis(query,query_text,dbname):
+        #validemos FROM y el nombre de la tabla
+        tb_name=''
+        fromexist=False
+        for x in range (len(query)):
+            if query[x] == 'FROM':
+                fromexist=True
+                if get_table_list(dbname,query_text[x+1])==True:
+                    tb_name=query_text[x+1]
+                    pass
+                else:
+                    target=query_text[x-1]+' '+query_text[x]+' '+query_text[x+1]
+                    syntaxError(target)
+                    return False
+                    
+        if fromexist==True: 
+            #validamos los nombres de las columnas
+            x=0
+            while x < (len(query)-1):
+                if x == 'FROM':
+                    return True
+                elif query[x] == 'VAR':
+                    x+=1
+                    if query[x] == 'COMMA' or query[x] == 'FROM':
+                        a=[query_text[x-1]]
+                        if get_table_columns(dbname,a,tb_name)==True:
+                            pass
+                    
+                        else:
+                            print('Tabla "{}" no existe', query_text[x])
+                            return False
+                x+=1
+                
+
+        else:
+            syntaxError(" ".join(map(str,query_text)))
+            return False
+        return True
 
 
-    def parserProcess(tokens_arr,tokens_text_arr):
-        dbname='baseprueba'
-        if tokens_arr[0]=='CREATE' and  tokens_arr[1]=='DATABASE':
+    def persistent_selected_db(dbname,mode):
+        if mode == 'w':
+            a_file = open("databases.txt", "r")
+            lines = a_file.readlines()
+            a_file.close()
+
+            new_file = open("sample.txt", "w")
+            for line in lines:
+                if line.strip("\n") != "line1":
+                    new_file.write(line)
+            new_file.close()
+            with open('databases.txt', 'w') as f:
+                f.write(dbname)
+                f.close()
+        else:
+            f = open("databases.txt", "r")
+            #tiene que retornar el nombre de la base de datos , tambien que verificar que dicha base
+            #exista en caso contrario se utiliza la defult baseprueba2
+            nombre_txt= f.readline()
+            print(nombre_txt)
+            if nombre_txt!="baseprueba2":
+                if  get_dblist(nombre_txt)==True:
+                    return nombre_txt
+                else:
+                    return "baseprueba2"
+
+            else:
+                return "baseprueba2"
+         
+
+  
+    #################################################
+    #                                               #
+    #               ParserProcess                   #
+    #                                               #
+    #################################################
+    def parser_procces(tokens_arr,tokens_text_arr):
+        #set default database
+        dbname='baseprueba2'
+
+        #show databases
+        if tokens_arr[0].lower()=='show' and tokens_arr[0].lower()=='databases':
+            execute_query(tokens_text_arr)
+
+
+        #use database
+        elif tokens_text_arr[0].lower()=='use':
+            try:
+                if tokens_arr[1]=='VAR' and get_dblist(tokens_text_arr[1])==True:
+                    persistent_selected_db(tokens_text_arr[1].lower(),'w')
+                    return "Base de datos '"+tokens_text_arr[1]+"' seleccionada"
+                else:
+                    return "no existe la base de datos "+ tokens_text_arr[1].lower()
+            except IndexError:
+                return syntaxError(' '.join(map(str,tokens_text_arr)))
+
+        #Basico verificacion de la sentencia Create database 
+        elif tokens_arr[0]=='CREATE' and  tokens_arr[1]=='DATABASE':
             try:
                 tokens_text_arr[2]
                 
@@ -922,31 +1110,31 @@ def parser(sql_sentence_web):
                         if  tokens_arr[2]=='VAR':
                             dbname=tokens_text_arr[2]
                             create_db(tokens_text_arr)
-                            print('Base de datos "', tokens_text_arr[2] ,'" ha sido creada exitosamente')
+                            return('Base de datos "', tokens_text_arr[2] ,'" ha sido creada exitosamente')
                         else:
                             syntaxError(tokens_text_arr[2])
                     except NameError:
-                        print("Error en la sitaxis")
-                        pass
+                        return("Error en la sitaxis")
+
             except IndexError:
-                print("Error en la sytaxis: ", " ".join(map(str,tokens_text_arr)))
-                
+                return("Error en la sytaxis: ", " ".join(map(str,tokens_text_arr)))
+                    
         #Basico verificacion de la sentencia Drop database            
         elif tokens_arr[0]=='DROP' and  tokens_arr[1]=='DATABASE':
             try:
-                tokens_text_arr[2]
-                if get_dblist(tokens_text_arr[2])==True:
+                
+                if get_dblist(tokens_text_arr[2])==True :
                     try:
-                        execute_query(tokens_text_arr,dbname)
-                        print('Base de datos "', tokens_text_arr[2] ,'" ha sido eliminiada exitosamente')
+                        execute_query(tokens_text_arr,tokens_arr,tokens_text_arr[2])
+                        return('Base de datos "', tokens_text_arr[2] ,'" ha sido eliminiada exitosamente')
                     except NameError:
-                        print("Error en la sitaxis")
-                        pass
+                        return("Error en la sitaxis")
+                        
                 else:
-                    print("La base de datos NO existe")
+                    return("La base de datos NO existe")
 
             except IndexError:
-                print("Error en la sytaxis: ", " ".join(map(str,tokens_text_arr)))
+                return("Error en la sytaxis: ", " ".join(map(str,tokens_text_arr)))
 
         #create table
         elif tokens_arr[0]=='CREATE' and  tokens_arr[1]=='TABLE':
@@ -962,20 +1150,21 @@ def parser(sql_sentence_web):
                             Par=Par-1
                     if Par==0:
                         if create_table_analisis(tokens_arr, tokens_text_arr)==True:
+                            dbname=persistent_selected_db(dbname,'r')
                             if get_table_list(dbname, tokens_text_arr[2])==False:
-                                execute_query(tokens_text_arr,dbname)
-                                print('Tabla "{}" creada exitosamente'.format(tokens_text_arr[2]))
+                                execute_query(tokens_text_arr,tokens_arr,dbname)
+                                return('Tabla "{}" creada exitosamente'.format(tokens_text_arr[2]))
                             else:
-                                print('La tabla "{}" ya existe'.format(tokens_text_arr[2]))
+                                return('La tabla "{}" ya existe'.format(tokens_text_arr[2]))
                         else:
                             syntaxError((" ".join(map(str,tokens_text_arr))))
                     else:   
-                        print("Error de sintaxis quizas falta un '(' ó ')'?")   
+                        return("Error de sintaxis quizas falta un '(' ó ')'?")   
                 else:
-                    print("Nombre de la tabla invalido")         
+                    return("Nombre de la tabla invalido")         
 
             except IndexError:
-                print("Error en la sytaxis: ", " ".join(map(str,tokens_text_arr)))
+                return("Error en la sytaxis: ", " ".join(map(str,tokens_text_arr)))
 
         #drop table           
         elif tokens_arr[0]=='DROP' and  tokens_arr[1]=='TABLE':
@@ -984,16 +1173,16 @@ def parser(sql_sentence_web):
                 
                 if get_table_list(dbname, tokens_text_arr[2])==True:
                     try:
-                        execute_query(tokens_text_arr,dbname)
-                        print('Tabla "', tokens_text_arr[2] ,'" ha sido eliminiada exitosamente')
+                        execute_query(tokens_text_arr,tokens_arr,dbname)
+                        return('Tabla "', tokens_text_arr[2] ,'" ha sido eliminiada exitosamente')
                     except NameError:
-                        print("Error en la sitaxis")
+                        return("Error en la sitaxis")
                         pass
                 else:
-                    print("La tabla NO existe 2")
+                    return("La tabla NO existe 2")
 
             except IndexError:
-                print("Error en la sytaxis: ", " ".join(map(str,tokens_text_arr)))
+                return("Error en la sytaxis: ", " ".join(map(str,tokens_text_arr)))
 
         #insert
         elif tokens_arr[0]=='INSERT' and tokens_arr[1]=='INTO':
@@ -1011,40 +1200,63 @@ def parser(sql_sentence_web):
                                 if tokens_arr[x+1]=='COMMA' or tokens_arr[x+1]=='R_PAREN':
                                     campos.append(tokens_text_arr[x])
                                 elif tokens_arr[x+1]=='L_PAREN':
-                                    print('')
+                                    return('')
                                 else:
-                                    print('Error: ',tokens_text_arr[x-1],tokens_text_arr[x],tokens_text_arr[x+1])
+                                    return('Error: ',tokens_text_arr[x-1],tokens_text_arr[x],tokens_text_arr[x+1])
                         elif tokens_arr[x] == "R_PAREN":
                             Parentesis-=1
                         elif tokens_arr[x] == "VALUES" and Parentesis!=0:
-                            print('Syntax error: ',tokens_text_arr[x-1], "')'",tokens_text_arr[x])
+                            return('Syntax error: ',tokens_text_arr[x-1], "')'",tokens_text_arr[x])
                         elif tokens_arr[x] == "VALUES":
                             values=True
                             break
                     if Parentesis==0 and values==True and get_table_columns(dbname,campos,tokens_text_arr[2])==True:
                         if insert_analisis(tokens_arr,tokens_text_arr,x) == True:
-                            execute_query(tokens_text_arr,dbname)
+                            dbname= persistent_selected_db(dbname, 'r')
+                            execute_query_insert(tokens_text_arr,tokens_arr,dbname)
             else:
-                print('La tabla {} no existe'.format(tokens_text_arr[2]))
+                return('La tabla {} no existe'.format(tokens_text_arr[2]))
+        
+        #select
+        elif tokens_arr[0]=='SELECT':
+            
+            try:
+                if tokens_arr[1]=="STAR" and tokens_arr[2]=='FROM':
+                    dbname=persistent_selected_db(dbname,'r')
+                    if get_table_list(dbname,tokens_text_arr[3])==True:
+                        return execute_query_select(tokens_text_arr,tokens_arr, dbname)
+                        #imprimir los datos obtenidos
+                
+                elif tokens_arr[1]=='VAR':
+                    dbname=persistent_selected_db(dbname,'r')
+                    if select_analisis(tokens_arr,tokens_text_arr,dbname)==True:
+                        return execute_query_select(tokens_text_arr,tokens_arr,dbname)
+
+
+            except IndexError:
+                syntaxError(" ".join(map(str,tokens_text_arr)))
+                
         else:
-            target=str(tokens_text_arr[0])+ ' ' + str(tokens_text_arr[1]) + ' ' + str(tokens_text_arr[3])
+            target=str(tokens_text_arr[0])+ ' ' + str(tokens_text_arr[1]) + ' ' + str(tokens_text_arr[2])
             syntaxError(target)
 
-
-    tokens = Tokenizer().tokenize(sql_sentence_web)
+    
+###
+    tokens = Tokenizer().tokenize(my_sql_stmn)
     tokens_arr=[]
     tokens_text_arr=[]
-    dataTest=tokens
     for x in range(len(tokens)):
         var=tokens[x]
         tokens_arr.append(str(var.token_type).removeprefix("TokenType."))
         tokens_text_arr.append(str(var.text))
+
     print(tokens_arr)
     print(tokens_text_arr)
-    
-    
-    return parserProcess(tokens_arr,tokens_text_arr)
 
+    return parser_procces(tokens_arr,tokens_text_arr)
+    
+
+        
 
 ########################################################
 ########################################################
@@ -1058,9 +1270,9 @@ def parser(sql_sentence_web):
 def result():
     output = request.form.to_dict()
     print("pruebas",output)
-    #name = (parser(output["name"]))
+    name = (parser(output["name"]))
     
-    name = output["name"]
+    # name = output["name"]
 
 
     return render_template('index.html', name = name)
