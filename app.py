@@ -1295,6 +1295,9 @@ def result():
     output = request.form.to_dict()
     print("pruebas",output)
     # name = (parser(output["name"]))
+
+ 
+    
     
     name = [('adasd', 'adasda'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz')]
 

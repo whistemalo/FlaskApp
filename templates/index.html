@@ -41,9 +41,13 @@
             <div class="col-12">
               <label for="address" class="form-label">Mensaje</label>
               <br>
-              {% if name %}
-               {{name}}
-              {% endif %}
+                <ul>
+                    {% if name %}
+                      {% for x in name %}
+                        <ul>{{x}}</ul> 
+                      {% endfor %}
+                    {% endif %}
+                </ul>
             </div>
             <br>
 
