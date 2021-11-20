@@ -1047,7 +1047,7 @@ def parser (my_sql_stmn):
             lines = a_file.readlines()
             a_file.close()
 
-            new_file = open("sample.txt", "w")
+            new_file = open("databases.txt", "w")
             for line in lines:
                 if line.strip("\n") != "line1":
                     new_file.write(line)
@@ -1235,11 +1235,35 @@ def parser (my_sql_stmn):
 
             except IndexError:
                 syntaxError(" ".join(map(str,tokens_text_arr)))
-                
-        else:
-            target=str(tokens_text_arr[0])+ ' ' + str(tokens_text_arr[1]) + ' ' + str(tokens_text_arr[2])
-            syntaxError(target)
 
+        #delete
+        elif tokens_arr[0]=='Delete'and tokens_arr[1]=='STAR':
+            try:
+
+                if get_table_list(dbname, tokens_text_arr[3])==True:
+                    execute_query(tokens_arr,dbname)
+                    print('Tabla "', tokens_text_arr[3],'" existe')
+            except IndexError:
+                print("Error en la sytaxis: ", " ".join(map(str,tokens_text_arr)))
+
+        #DELETE FROM nombre_tabla WHERE nombre_columna = valor --- validacion 
+        elif tokens_arr[0]=='DELETE' and tokens_arr[1]=='FROM':
+            try:
+                if tokens_arr[2]=='VAR' and get_table_list(dbname, tokens_text_arr[2])==True:
+                    execute_query(tokens_arr,dbname)
+                    print('Tabla "', tokens_text_arr[3],'" existe')
+            except IndexError:
+                print("Error en la sytaxis: ", " ".join(map(str,tokens_text_arr)))  
+        
+
+        else:
+            try:
+                target=str(tokens_text_arr[0])+ ' ' + str(tokens_text_arr[1]) + ' ' + str(tokens_text_arr[2])
+                return syntaxError(target)
+
+            except print(0):
+                pass
+            
     
 ###
     tokens = Tokenizer().tokenize(my_sql_stmn)
