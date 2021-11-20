@@ -1058,9 +1058,9 @@ def parser(sql_sentence_web):
 def result():
     output = request.form.to_dict()
     print("pruebas",output)
-    name = (parser(output["name"]))
+    #name = (parser(output["name"]))
     
-    # name = output["name"]
+    name = output["name"]
 
 
     return render_template('index.html', name = name)
