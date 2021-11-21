@@ -748,6 +748,24 @@ def parser (my_sql_stmn):
 
 
     #recibe el nombre de la base de datos y nombre de la tabla y comprueba que existan
+    def get_table_list_names(dbname):
+        
+        mydb = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="12345",
+        database=dbname)
+
+        mycursor = mydb.cursor()
+        mycursor.execute("SHOW TABLES")
+        
+        table_list_name=[]
+        for x in mycursor:
+            table_list_name.append(x)
+        mydb.close()
+        return table_list_name
+
+
     def get_table_list(dbname, tableName):
         
         mydb = mysql.connector.connect(
@@ -779,19 +797,13 @@ def parser (my_sql_stmn):
         mycursor.execute(querybuild)
         mycursor.close()
 
-    #
-    def execute_query(query,query_tokens,dbname):
-        querybuild=""" """
-        for x in range (len(query)):
-            if query_tokens[x]=='STRING':
-                querybuild=querybuild+'"'+query[x]+'"'
-            else:
-                querybuild=querybuild+' '+query[x]
+    #show databases
+    def execute_query_show(query):
+        
         mydb = mysql.connector.connect(
                 host="localhost",
                 user="root",
                 passwd="12345",
-                database=dbname
                 )
 
         if mydb.is_connected()==False:
@@ -800,10 +812,15 @@ def parser (my_sql_stmn):
             print("Conectado")
 
         mycursor = mydb.cursor()
-        mycursor.execute(str(querybuild))
+        mycursor.execute(query)
+        myresult= mycursor.fetchall()
+        response_from_select=[]
+        for x in myresult:
+            response_from_select.append(x)
         mydb.close()
-        return 
-    
+        print(response_from_select)
+        return response_from_select
+
     
     def execute_query_insert(query,query_tokens,dbname):
         querybuild=""" """
@@ -812,6 +829,7 @@ def parser (my_sql_stmn):
                 querybuild=querybuild+'"'+query[x]+'"'
             else:
                 querybuild=querybuild+' '+query[x]
+                print(querybuild)
         mydb = mysql.connector.connect(
                 host="localhost",
                 user="root",
@@ -827,9 +845,9 @@ def parser (my_sql_stmn):
         mycursor = mydb.cursor()
         mycursor.execute(str(querybuild))
         mydb.commit()
-        print(mycursor.rowcount, "datos ingresados.")
         mydb.close()
-        return 
+        return mycursor.rowcount + "datos ingresados."
+    
     def execute_query_select(query,query_tokens,dbname):
         querybuild=""" """
         for x in range (len(query)):
@@ -858,6 +876,24 @@ def parser (my_sql_stmn):
         mydb.close()
         print(response_from_select)
         return response_from_select
+
+    def execute_query_select_from(query,dbname):
+        mydb = mysql.connector.connect(
+                host="localhost",
+                user="root",
+                passwd="12345",
+                database=dbname
+                )
+        mycursor = mydb.cursor()
+        mycursor.execute(query)
+        myresult= mycursor.fetchall()
+        response_from_select=[]
+        for x in myresult:
+            response_from_select.append(x)
+        mydb.close()
+        print(response_from_select)
+        return response_from_select
+    
     def execute_query(query,query_tokens,dbname):
         querybuild=""" """
         for x in range (len(query)):
@@ -883,8 +919,6 @@ def parser (my_sql_stmn):
         print(mycursor.rowcount, "datos ingresados.")
         mydb.close()
         return 
-
-
 
     def create_table_analisis_apend(tokens_query, text_query,i):
         if tokens_query[i]=='L_PAREN':
@@ -1003,7 +1037,7 @@ def parser (my_sql_stmn):
 
     def select_analisis(query,query_text,dbname):
         #validemos FROM y el nombre de la tabla
-        tb_name=''
+        tb_name='a'
         fromexist=False
         for x in range (len(query)):
             if query[x] == 'FROM':
@@ -1021,7 +1055,7 @@ def parser (my_sql_stmn):
             x=0
             while x < (len(query)-1):
                 if x == 'FROM':
-                    return True
+                    return tb_name
                 elif query[x] == 'VAR':
                     x+=1
                     if query[x] == 'COMMA' or query[x] == 'FROM':
@@ -1031,14 +1065,14 @@ def parser (my_sql_stmn):
                     
                         else:
                             print('Tabla "{}" no existe', query_text[x])
-                            return False
+                            return tb_name
                 x+=1
                 
 
         else:
             syntaxError(" ".join(map(str,query_text)))
-            return False
-        return True
+            return tb_name
+        return tb_name
 
 
     def persistent_selected_db(dbname,mode):
@@ -1080,18 +1114,27 @@ def parser (my_sql_stmn):
     def parser_procces(tokens_arr,tokens_text_arr):
         #set default database
         dbname='baseprueba2'
+        stm_type=0
+        response_struct=[]
 
         #show databases
-        if tokens_arr[0].lower()=='show' and tokens_arr[0].lower()=='databases':
-            execute_query(tokens_text_arr)
-
+        if tokens_text_arr[0].lower()=='show' and tokens_text_arr[1].lower()==' databases':
+            stm_type=1
+            response_struct.append(stm_type)
+            response_struct.append("Lista de bases de datos")
+            response_struct.append(execute_query_show(" ".join(map(str,tokens_text_arr))))
+            return response_struct
 
         #use database
         elif tokens_text_arr[0].lower()=='use':
             try:
                 if tokens_arr[1]=='VAR' and get_dblist(tokens_text_arr[1])==True:
+                    stm_type=2
                     persistent_selected_db(tokens_text_arr[1].lower(),'w')
-                    return "Base de datos '"+tokens_text_arr[1]+"' seleccionada"
+                    response_struct.append(stm_type)
+                    response_struct.append("Base de datos '"+tokens_text_arr[1]+"' seleccionada")
+                    response_struct.append(execute_query_show('show databases'))
+                    return response_struct
                 else:
                     return "no existe la base de datos "+ tokens_text_arr[1].lower()
             except IndexError:
@@ -1109,8 +1152,12 @@ def parser (my_sql_stmn):
                         
                         if  tokens_arr[2]=='VAR':
                             dbname=tokens_text_arr[2]
+                            stm_type=3
                             create_db(tokens_text_arr)
-                            return('Base de datos "', tokens_text_arr[2] ,'" ha sido creada exitosamente')
+                            response_struct.append(stm_type)
+                            response_struct.append('Base de datos "'+ tokens_text_arr[2] +'" ha sido creada exitosamente')
+                            response_struct.append(execute_query_show('show databases'))    
+                            return response_struct
                         else:
                             syntaxError(tokens_text_arr[2])
                     except NameError:
@@ -1125,8 +1172,15 @@ def parser (my_sql_stmn):
                 
                 if get_dblist(tokens_text_arr[2])==True :
                     try:
+                        stm_type=4
                         execute_query(tokens_text_arr,tokens_arr,tokens_text_arr[2])
-                        return('Base de datos "', tokens_text_arr[2] ,'" ha sido eliminiada exitosamente')
+
+                        response_struct.append(stm_type)
+                        response_struct.append('Base de datos "'+ tokens_text_arr[2] + '" ha sido eliminiada exitosamente')
+                        response_struct.append(execute_query_show('show databases'))    
+                           
+                        return response_struct
+                        
                     except NameError:
                         return("Error en la sitaxis")
                         
@@ -1153,7 +1207,12 @@ def parser (my_sql_stmn):
                             dbname=persistent_selected_db(dbname,'r')
                             if get_table_list(dbname, tokens_text_arr[2])==False:
                                 execute_query(tokens_text_arr,tokens_arr,dbname)
-                                return('Tabla "{}" creada exitosamente'.format(tokens_text_arr[2]))
+                                stm_type=5
+                                response_struct.append(stm_type)
+                                response_struct.append('Tabla "{}" creada exitosamente'.format(tokens_text_arr[2]))
+                                response_struct.append(get_table_list_names(dbname))    
+                                return response_struct
+                               
                             else:
                                 return('La tabla "{}" ya existe'.format(tokens_text_arr[2]))
                         else:
@@ -1173,11 +1232,15 @@ def parser (my_sql_stmn):
                 
                 if get_table_list(dbname, tokens_text_arr[2])==True:
                     try:
+                        dbname=persistent_selected_db(dbname,'r')
                         execute_query(tokens_text_arr,tokens_arr,dbname)
-                        return('Tabla "', tokens_text_arr[2] ,'" ha sido eliminiada exitosamente')
+                        stm_type=6
+                        response_struct.append(stm_type)
+                        response_struct.append('Tabla "'+ tokens_text_arr[2] +'" ha sido eliminiada exitosamente')
+                        response_struct.append(get_table_list_names(dbname))    
                     except NameError:
                         return("Error en la sitaxis")
-                        pass
+                        
                 else:
                     return("La tabla NO existe 2")
 
@@ -1186,8 +1249,8 @@ def parser (my_sql_stmn):
 
         #insert
         elif tokens_arr[0]=='INSERT' and tokens_arr[1]=='INTO':
+            dbname=persistent_selected_db(dbname,'r')
             if get_table_list(dbname,tokens_text_arr[2])==True:
-
                 if tokens_arr[2]=='VAR' and tokens_arr[3]=='L_PAREN':
                     Parentesis=0 #contador de parenteis, si un parentesis se habre se tiene que cerrar
                     campos=[] #guarda nombres de columnas ejemplo "col1,col2"
@@ -1212,8 +1275,13 @@ def parser (my_sql_stmn):
                             break
                     if Parentesis==0 and values==True and get_table_columns(dbname,campos,tokens_text_arr[2])==True:
                         if insert_analisis(tokens_arr,tokens_text_arr,x) == True:
-                            dbname= persistent_selected_db(dbname, 'r')
-                            execute_query_insert(tokens_text_arr,tokens_arr,dbname)
+                            select_stm= 'select * from ' + tokens_text_arr[2]
+                            stm_type=7
+                            response_struct.append(stm_type)
+                            response_struct.append(execute_query_insert(tokens_text_arr,tokens_arr,dbname))
+                            response_struct.append( execute_query_select_from(select_stm)) 
+                            return response_struct
+                           
             else:
                 return('La tabla {} no existe'.format(tokens_text_arr[2]))
         
@@ -1224,25 +1292,42 @@ def parser (my_sql_stmn):
                 if tokens_arr[1]=="STAR" and tokens_arr[2]=='FROM':
                     dbname=persistent_selected_db(dbname,'r')
                     if get_table_list(dbname,tokens_text_arr[3])==True:
-                        return execute_query_select(tokens_text_arr,tokens_arr, dbname)
+                        stm_type=8
+                        response_struct.append(stm_type)
+                        response_struct.append('Campos de tabla "{}" '.format(tokens_text_arr[3]))
+                        response_struct.append(execute_query_select(tokens_text_arr,tokens_arr, dbname)) 
+                        return response_struct
                         #imprimir los datos obtenidos
                 
                 elif tokens_arr[1]=='VAR':
                     dbname=persistent_selected_db(dbname,'r')
-                    if select_analisis(tokens_arr,tokens_text_arr,dbname)==True:
-                        return execute_query_select(tokens_text_arr,tokens_arr,dbname)
+                    if select_analisis(tokens_arr,tokens_text_arr,dbname)!="a":
+                        stm_type=8
+                        response_struct.append(stm_type)
+                        response_struct.append('Tabla "{}" creada exitosamente'.format(tokens_text_arr[2]))
+                        response_struct.append(execute_query_select(tokens_text_arr,tokens_arr,dbname)) 
+                        return response_struct
 
 
             except IndexError:
                 syntaxError(" ".join(map(str,tokens_text_arr)))
 
         #delete
-        elif tokens_arr[0]=='Delete'and tokens_arr[1]=='STAR':
+        elif tokens_arr[0]=='DELETE'and tokens_arr[1]=='STAR':
             try:
-
+                dbname=persistent_selected_db(dbname,'r')
                 if get_table_list(dbname, tokens_text_arr[3])==True:
+                    select_stm=9
+
                     execute_query(tokens_arr,dbname)
-                    print('Tabla "', tokens_text_arr[3],'" existe')
+                    response_struct.append(stm_type)
+                    response_struct.append('Datos eliminados creada exitosamente'.format(tokens_text_arr[2]))
+                    response_struct.append(execute_query_select_from('select * from',dbname)) 
+                    return response_struct
+                    
+                else:
+                    return "La tabla '{}' no existe".format(tokens_text_arr[3])   
+
             except IndexError:
                 print("Error en la sytaxis: ", " ".join(map(str,tokens_text_arr)))
 
@@ -1261,8 +1346,8 @@ def parser (my_sql_stmn):
                 target=str(tokens_text_arr[0])+ ' ' + str(tokens_text_arr[1]) + ' ' + str(tokens_text_arr[2])
                 return syntaxError(target)
 
-            except print(0):
-                pass
+            except IndexError:
+                return "error"
             
     
 ###
@@ -1278,9 +1363,6 @@ def parser (my_sql_stmn):
     print(tokens_text_arr)
 
     return parser_procces(tokens_arr,tokens_text_arr)
-    
-
-        
 
 ########################################################
 ########################################################
@@ -1293,13 +1375,17 @@ def parser (my_sql_stmn):
 @app.route('/result',methods=['POST', 'GET'])
 def result():
     output = request.form.to_dict()
-    print("pruebas",output)
-    # name = (parser(output["name"]))
+    # 1--> show databases
+    # 2 --> use databasename
+    # 3 --> create database
+    # 4 --> drop database 
+    # 5 --> create table  
+    # 6 --> drop table  ?
+    # 7 --> insert 
+    # show databases-- responde tipo consulta, mensaje, array
 
- 
-    
-    
-    name = [('adasd', 'adasda'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz')]
+    name=(parser('INSERT INTO abc (col1,col3) VALUES("agua","coca");'))
+    print(name)
 
 
     return render_template('index.html', name = name)
