@@ -1383,12 +1383,12 @@ def result():
     # 6 --> drop table  ?
     # 7 --> insert 
     # show databases-- responde tipo consulta, mensaje, array
+    
+    name=(parser('create database prueb'))
+    print(parser('create database prueb'))
 
-    name=(parser('INSERT INTO abc (col1,col3) VALUES("agua","coca");'))
-    print(name)
 
-
-    return render_template('select.html', name = name)
+    return render_template('error.html', name = name[1])
     
 
 if __name__ == "__main__":
