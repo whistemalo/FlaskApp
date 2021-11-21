@@ -1302,7 +1302,7 @@ def result():
     name = [('adasd', 'adasda'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz'), ('ruby', 'paz')]
 
 
-    return render_template('index.html', name = name)
+    return render_template('select.html', name = name)
     
 
 if __name__ == "__main__":
